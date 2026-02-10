@@ -1,111 +1,44 @@
-# discordjs-v14-bot-template
+# Liquidity Datum
 
-A clean, minimal **Discord.js v14 bot template** built for rapid iteration and reuse across multiple bots.
+Liquidity Datum is a Discord bot for exporting Liquity v2 fork activity into clean, tax‑friendly CSVs. It focuses on *what happened* (redemptions, liquidations, stability pool exchanges) and gives you a clear audit trail you can filter and analyze in a spreadsheet.
 
-This template focuses on:
-- Clear project structure
-- Safe startup and error handling
-- Environment-variable driven configuration
-- Consistent, controllable logging
-- Slash-command–first design (Discord.js v14)
+<img src="img/liquidity-datum.png" alt="liquidity datum bot" width="600">
 
 ---
 
-## What this template provides
+## Features at a glance
 
-- Discord.js v14 client setup
-- Slash command loading and registration (guild-scoped for fast iteration)
-- Centralized environment validation
-- Structured event handlers (`onReady`, `onInteraction`, `onMessage`)
-- A tiny custom logger with:
-  - log levels
-  - always-visible startup messages
-  - optional colored output
-- Example commands and scheduled task logic for reference
+### /my-redemptions
+Redemption history with totals by collateral, clear period filtering, and downloadable CSV.
 
----
+<img src="img/my-redemptions.png" alt="/my-redemptions screenshot" width="720">
 
-## Requirements
+### /my-liquidations
+Liquidation history (if any) with per‑collateral totals and CSV export.
 
-- **Node.js 18+**
-- A Discord application and bot token
+<img src="img/my-liquidations.png" alt="/my-liquidations screenshot" width="720">
 
-This project includes a `.nvmrc` file. If you use nvm, run:
+### /my-sp-tx
+Stability pool activity with exchange summaries and CSV export.
 
-```bash
-nvm use
-```
+<img src="img/my-sp-tx.png" alt="/my-sp-tx screenshot" width="720">
 
-Set the .nvmrc file to your major Node version (i.e. 24, 22, 20, or minimum 18).
-Tested on Node 20 and 24, .nvmrc is currently set to 24.
+### /all-tx
+Combined view across redemptions, liquidations, and stability pool events for a full‑period export.
+
+<img src="img/all-tx.png" alt="/all-tx screenshot" width="720">
 
 ---
 
-## Installation
+## What the bot delivers
 
-Clone the repository and install dependencies:
-
-```bash
-npm install
-```
-
-Create your environment file:
-
-```bash
-cp .env-template .env
-```
-
-Fill in the required values in `.env`.
-
-Start the bot (to test):
-
-```bash
-node start
-```
-
-For development, you can also run:
-
-```bash
-DEBUG=2 npm run dev
-```
-
-RECOMMENDED: Use pm2 or other process manager for production.
-
----
-
-## Environment configuration
-
-All required configuration is provided via environment variables.
-
-At minimum, you must set:
-- `BOT_TOKEN`
-- `CLIENT_ID`
-- `GUILD_ID`
-
-Optional variables control logging verbosity and example schedulers.
-
-See `.env-template` for the full list.
-
----
-
-## Logging
-
-This template uses a **custom lightweight logger** instead of raw `console.*`.
-
-Features include:
-- Log levels (`STARTUP`, `ERROR`, `WARN`, `INFO`, `DEBUG`)
-- Always-visible startup confirmation
-- Optional ANSI color output
-- Single-point verbosity control via `.env`
-
-Full documentation:
-```
-./docs/LOGGER.md
-```
+- **Consistent CSV formats** across commands, with common core fields.
+- **Time‑range filtering** (YTD, prior years, all time).
+- **Clear summaries** so you can see totals at a glance.
+- **Data freshness** indicators based on scan completion time.
 
 ---
 
 ## License
 
 MIT
-

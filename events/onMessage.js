@@ -8,9 +8,7 @@ const log = require("../utils/logger");
 async function onMessage(message) {
   if (message.author?.bot) return;
 
-  log.debug(`Message from ${message.author.tag}: ${message.content}`);
-  // Example:
-  // await message.reply("Bingo");
+  // Intentionally no-op (no logging for user messages).
 }
 
 module.exports = { onMessage };

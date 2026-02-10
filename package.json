@@ -4,7 +4,12 @@
   "description": "Bot template using discordjs v14",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "scan:troves": "node scripts/scanTroves.js",
+    "scan:sp": "node scripts/scanStabilityPool.js",
+    "scan:all": "node scripts/scanAll.js",
+    "test:rpc": "node scripts/testRpcLogs.js",
+    "reset:datum": "node scripts/resetDatum.js"
   },
   "repository": {
     "type": "git",
@@ -24,8 +29,9 @@
   },
   "homepage": "https://github.com/go140point6/discordjs-v14-bot-template#readme",
   "dependencies": {
-    "axios": "^1.13.2",
+    "better-sqlite3": "^12.0.0",
     "discord.js": "^14.25.1",
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.2.3",
+    "ethers": "^6.16.0"
   }
 }

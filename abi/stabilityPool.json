@@ -1,0 +1,53 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "_depositor", "type": "address" },
+      { "indexed": false, "internalType": "uint8", "name": "_operation", "type": "uint8" },
+      { "indexed": false, "internalType": "uint256", "name": "_depositLossSinceLastOperation", "type": "uint256" },
+      { "indexed": false, "internalType": "int256", "name": "_topUpOrWithdrawal", "type": "int256" },
+      { "indexed": false, "internalType": "uint256", "name": "_yieldGainSinceLastOperation", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_yieldGainClaimed", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_ethGainSinceLastOperation", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_ethGainClaimed", "type": "uint256" }
+    ],
+    "name": "DepositOperation",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "_depositor", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "_newDeposit", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_stashedColl", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_snapshotP", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_snapshotS", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_snapshotB", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_snapshotScale", "type": "uint256" }
+    ],
+    "name": "DepositUpdated",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "_depositor", "type": "address" }
+    ],
+    "name": "getCompoundedBoldDeposit",
+    "outputs": [
+      { "internalType": "uint256", "name": "compoundedDeposit", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "_depositor", "type": "address" }
+    ],
+    "name": "getDepositorCollGain",
+    "outputs": [
+      { "internalType": "uint256", "name": "", "type": "uint256" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

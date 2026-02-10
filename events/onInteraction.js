@@ -11,9 +11,10 @@ async function onInteraction(interaction) {
         log.warn(`No command handler found for /${interaction.commandName}`);
 
         if (!interaction.replied && !interaction.deferred) {
+          const { MessageFlags } = require("discord.js");
           await interaction.reply({
             content: "⚠️ This command is not recognized.",
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
         return;
@@ -35,14 +36,16 @@ async function onInteraction(interaction) {
 
     try {
       if (interaction.replied || interaction.deferred) {
+        const { MessageFlags } = require("discord.js");
         await interaction.followUp({
           content: "❌ An unexpected error occurred while handling this interaction.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       } else {
+        const { MessageFlags } = require("discord.js");
         await interaction.reply({
           content: "❌ An unexpected error occurred while handling this interaction.",
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     } catch {
