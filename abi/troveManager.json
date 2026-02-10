@@ -1,0 +1,53 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": false, "internalType": "uint256", "name": "_attemptedBoldAmount", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_actualBoldAmount", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_ETHSent", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_ETHFee", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_price", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_redemptionPrice", "type": "uint256" }
+    ],
+    "name": "Redemption",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "_troveId", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_ETHFee", "type": "uint256" }
+    ],
+    "name": "RedemptionFeePaidToTrove",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "_troveId", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_debt", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_coll", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_stake", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_annualInterestRate", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_snapshotOfTotalCollRedist", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_snapshotOfTotalDebtRedist", "type": "uint256" }
+    ],
+    "name": "TroveUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "_troveId", "type": "uint256" },
+      { "indexed": false, "internalType": "uint8", "name": "_operation", "type": "uint8" },
+      { "indexed": false, "internalType": "uint256", "name": "_annualInterestRate", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_debtIncreaseFromRedist", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "_debtIncreaseFromUpfrontFee", "type": "uint256" },
+      { "indexed": false, "internalType": "int256", "name": "_debtChangeFromOperation", "type": "int256" },
+      { "indexed": false, "internalType": "uint256", "name": "_collIncreaseFromRedist", "type": "uint256" },
+      { "indexed": false, "internalType": "int256", "name": "_collChangeFromOperation", "type": "int256" }
+    ],
+    "name": "TroveOperation",
+    "type": "event"
+  }
+]

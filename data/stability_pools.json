@@ -1,0 +1,24 @@
+{
+  "chains": {
+    "FLR": {
+      "contracts": [
+        {
+          "key": "sp_fxrp",
+          "protocol": "ENOSYS_SP_FXRP",
+          "address": "0x2c817F7159c08d94f09764086330c96Bb3265A2f",
+          "default_start_block": 51999000,
+          "coll_symbol": "FXRP",
+          "coll_decimals": 6
+        },
+        {
+          "key": "sp_wflr",
+          "protocol": "ENOSYS_SP_WFLR",
+          "address": "0x0Dd6daab4cB9A0ba6707Cf59DBfbc28cc33CA24A",
+          "default_start_block": 51999000,
+          "coll_symbol": "WFLR",
+          "coll_decimals": 18
+        }
+      ]
+    }
+  }
+}

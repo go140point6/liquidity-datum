@@ -1,5 +1,9 @@
 // ./index.js
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({
+  path: path.join(__dirname, ".", ".env"),
+  quiet: true,
+});
 
 const { Client, Events } = require("discord.js");
 const { GatewayIntentBits } = require("./config/GatewayIntentBits");

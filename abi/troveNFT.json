@@ -1,0 +1,15 @@
+[
+  {
+    "inputs": [],
+    "name": "troveManager",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
