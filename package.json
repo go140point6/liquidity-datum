@@ -1,7 +1,7 @@
 {
-  "name": "discordjs-v14-bot-template",
-  "version": "2.0.0",
-  "description": "Bot template using discordjs v14",
+  "name": "liquidity-datum",
+  "version": "1.0.0",
+  "description": "Liquidity Datum Discord bot for exporting Liquity v2 fork activity to CSV",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -13,21 +13,21 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/go140point6/discordjs-v14-bot-template.git"
+    "url": "git+https://github.com/go140point6/liquidity-datum.git"
   },
   "keywords": [
-    "bot",
-    "v14",
-    "slashcommands",
-    "embeds",
-    "template"
+    "enosys",
+    "flare",
+    "lp",
+    "liquity",
+    "loans"
   ],
   "author": "go140point6",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/go140point6/discordjs-v14-bot-template/issues"
+    "url": "https://github.com/go140point6/liquidity-datum/issues"
   },
-  "homepage": "https://github.com/go140point6/discordjs-v14-bot-template#readme",
+  "homepage": "https://github.com/go140point6/liquidity-datum#readme",
   "dependencies": {
     "better-sqlite3": "^12.0.0",
     "discord.js": "^14.25.1",
