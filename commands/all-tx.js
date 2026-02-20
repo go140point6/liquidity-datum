@@ -95,6 +95,24 @@ function getOpLabel(code) {
   return String(code);
 }
 
+function getTroveOpLabel(code) {
+  const n = Number(code);
+  return (
+    {
+      0: "openTrove",
+      1: "closeTrove",
+      2: "adjustTrove",
+      3: "adjustTroveInterestRate",
+      4: "applyPendingDebt",
+      5: "liquidate",
+      6: "redeemCollateral",
+      7: "openTroveAndJoinBatch",
+      8: "setInterestBatchManager",
+      9: "removeFromBatch",
+    }[n] || String(code)
+  );
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("all-tx")
@@ -150,6 +168,7 @@ module.exports = {
       }
 
       const combined = [];
+      const loanOpsSummary = new Map();
       const redemptionSummary = new Map();
       const liquidationSummary = new Map();
       const spSummary = new Map();
@@ -183,7 +202,7 @@ module.exports = {
           if (!troveOp) continue;
           const op = parseJsonSafe(troveOp.data_json);
           const opCode = Number(op?._operation);
-          if (![5, 6].includes(opCode)) continue;
+          if (!Number.isInteger(opCode)) continue;
 
           const updated = [...group]
             .filter((r) => r.event_name === "TroveUpdated")
@@ -217,38 +236,79 @@ module.exports = {
             ? Number(ethers.formatUnits(collDeltaAbs, collMeta.decimals))
             : 0;
 
-          const summaryMap = opCode === 6 ? redemptionSummary : liquidationSummary;
-          if (!summaryMap.has(troveOp.contract_key)) {
-            summaryMap.set(troveOp.contract_key, {
-              contractKey: troveOp.contract_key,
-              collSymbol: collMeta.symbol,
-              count: 0,
-              debtTotal: 0,
-              collTotal: 0,
-            });
+          if (opCode === 5 || opCode === 6) {
+            const summaryMap = opCode === 6 ? redemptionSummary : liquidationSummary;
+            if (!summaryMap.has(troveOp.contract_key)) {
+              summaryMap.set(troveOp.contract_key, {
+                contractKey: troveOp.contract_key,
+                collSymbol: collMeta.symbol,
+                count: 0,
+                debtTotal: 0,
+                collTotal: 0,
+              });
+            }
+            const agg = summaryMap.get(troveOp.contract_key);
+            agg.count += 1;
+            agg.debtTotal += debtAmount;
+            agg.collTotal += collAmount;
+          } else if ([0, 1, 2, 3, 4, 7, 8, 9].includes(opCode)) {
+            const feeRaw = parseSigned(op?._debtIncreaseFromUpfrontFee);
+            const repaidRaw = debtDelta != null && debtDelta < 0n ? -debtDelta : 0n;
+            const borrowedRaw = debtDelta != null && debtDelta > 0n ? debtDelta : 0n;
+            if (!loanOpsSummary.has(troveOp.contract_key)) {
+              loanOpsSummary.set(troveOp.contract_key, {
+                contractKey: troveOp.contract_key,
+                collSymbol: collMeta.symbol,
+                count: 0,
+                borrowedTotal: 0,
+                repaidTotal: 0,
+                feeTotal: 0,
+                feeOpenTotal: 0,
+                feeAdjustTotal: 0,
+                feeIrChangeTotal: 0,
+                feeOtherTotal: 0,
+                inferredInterestTotal: 0,
+              });
+            }
+            const agg = loanOpsSummary.get(troveOp.contract_key);
+            agg.count += 1;
+            agg.borrowedTotal += Number(ethers.formatUnits(borrowedRaw, CDP_DECIMALS));
+            agg.repaidTotal += Number(ethers.formatUnits(repaidRaw, CDP_DECIMALS));
+            const feeAmt = Number(ethers.formatUnits(feeRaw || 0n, CDP_DECIMALS));
+            agg.feeTotal += feeAmt;
+            if (opCode === 0) agg.feeOpenTotal += feeAmt;
+            else if (opCode === 2) agg.feeAdjustTotal += feeAmt;
+            else if (opCode === 3) agg.feeIrChangeTotal += feeAmt;
+            else if (feeAmt > 0) agg.feeOtherTotal += feeAmt;
+          } else {
+            continue;
           }
-          const agg = summaryMap.get(troveOp.contract_key);
-          agg.count += 1;
-          agg.debtTotal += debtAmount;
-          agg.collTotal += collAmount;
+
+          const txType = opCode === 6 ? "REDEMPTION" : opCode === 5 ? "LIQUIDATION" : "LOAN_OP";
+          const feeRaw = parseSigned(op?._debtIncreaseFromUpfrontFee);
+          const debtRedistRaw = parseSigned(op?._debtIncreaseFromRedist);
+          const soldCdp = debtDelta != null && debtDelta < 0n ? -debtDelta : null;
+          const boughtCdp = debtDelta != null && debtDelta > 0n ? debtDelta : null;
 
           combined.push({
-            tx_type: opCode === 6 ? "REDEMPTION" : "LIQUIDATION",
+            tx_type: txType,
             datetime_utc: blockTs ? new Date(blockTs * 1000).toISOString() : "",
             tx_hash: troveOp.tx_hash,
             block_number: troveOp.block_number,
             contract_key: troveOp.contract_key,
             trove_or_pool_id: troveOp.trove_id,
             wallet: "",
-            sold_amount: formatAmount(soldNonNeg, collMeta.decimals),
-            sold_symbol: collMeta.symbol,
-            bought_amount: formatAmount(debtDeltaAbs, CDP_DECIMALS),
+            sold_amount:
+              txType === "LOAN_OP" ? formatAmount(soldCdp, CDP_DECIMALS) : formatAmount(soldNonNeg, collMeta.decimals),
+            sold_symbol: txType === "LOAN_OP" ? CDP_SYMBOL : collMeta.symbol,
+            bought_amount:
+              txType === "LOAN_OP" ? formatAmount(boughtCdp, CDP_DECIMALS) : formatAmount(debtDeltaAbs, CDP_DECIMALS),
             bought_symbol: CDP_SYMBOL,
             debt_delta_cdp: formatSigned(debtDelta, CDP_DECIMALS),
             coll_delta: formatSigned(collDelta, collMeta.decimals),
             coll_symbol: collMeta.symbol,
             op_code: String(opCode),
-            op_label: opCode === 6 ? "redeemCollateral" : "liquidate",
+            op_label: getTroveOpLabel(opCode),
             debt_now_cdp: updatedData?._debt ? formatAmount(BigInt(updatedData._debt), CDP_DECIMALS) : "",
             coll_now: updatedData?._coll ? formatAmount(BigInt(updatedData._coll), collMeta.decimals) : "",
             ir_pct: updatedData?._annualInterestRate
@@ -256,14 +316,25 @@ module.exports = {
               : "",
             operation_code: "",
             operation_label: "",
-            cdp_loss: "",
+            cdp_loss: txType === "LOAN_OP" ? formatAmount(feeRaw, CDP_DECIMALS) : "",
             cdp_topup_withdrawal: "",
             cdp_yield_gain_since: "",
             cdp_yield_gain_claimed: "",
             coll_gain_since: "",
             coll_gain_claimed: "",
-            trade_cdp_spent: "",
+            trade_cdp_spent: txType === "LOAN_OP" ? formatAmount(debtRedistRaw, CDP_DECIMALS) : "",
             trade_coll_received: "",
+            upfront_fee_cdp: txType === "LOAN_OP" ? formatAmount(feeRaw, CDP_DECIMALS) : "",
+            debt_redist_cdp: txType === "LOAN_OP" ? formatAmount(debtRedistRaw, CDP_DECIMALS) : "",
+            estimated_loan_interest_cost_cdp:
+              txType === "LOAN_OP" ? formatAmount(0n, CDP_DECIMALS) : "",
+            _debtDeltaRaw: txType === "LOAN_OP" ? debtDelta || 0n : 0n,
+            _feeRaw: txType === "LOAN_OP" ? feeRaw || 0n : 0n,
+            _redistRaw: txType === "LOAN_OP" ? debtRedistRaw || 0n : 0n,
+            _debtNowRaw:
+              txType === "LOAN_OP" && updatedData?._debt ? BigInt(updatedData._debt) : null,
+            _troveKey:
+              txType === "LOAN_OP" ? `${troveOp.contract_key}:${troveOp.trove_id}` : "",
           });
         }
       }
@@ -273,7 +344,7 @@ module.exports = {
           `
           SELECT s.pool_key, s.depositor, s.block_number, s.block_timestamp,
                  s.tx_hash, s.log_index,
-                 s.operation AS event_name,
+                 s.operation,
                  s.deposit_loss, s.topup_or_withdrawal,
                  s.yield_gain_since, s.yield_gain_claimed,
                  s.coll_gain_since, s.coll_gain_claimed,
@@ -348,10 +419,38 @@ module.exports = {
           coll_gain_claimed: formatAmount(BigInt(r.coll_gain_claimed), collDecimals),
           trade_cdp_spent: formatAmount(depositLoss, CDP_DECIMALS),
           trade_coll_received: formatAmount(collGain, collDecimals),
+          upfront_fee_cdp: "",
+          debt_redist_cdp: "",
         });
       }
 
       combined.sort((a, b) => b.block_number - a.block_number);
+
+      const prevDebtByTrove = new Map();
+      const ascLoanRows = combined
+        .filter((r) => r.tx_type === "LOAN_OP")
+        .sort((a, b) => a.block_number - b.block_number);
+      for (const row of ascLoanRows) {
+        const nowDebt = row._debtNowRaw;
+        if (nowDebt == null) continue;
+        const prevDebt = prevDebtByTrove.get(row._troveKey);
+        if (prevDebt != null) {
+          const residual =
+            nowDebt -
+            prevDebt -
+            (row._debtDeltaRaw || 0n) -
+            (row._feeRaw || 0n) -
+            (row._redistRaw || 0n);
+          if (residual > 0n) {
+            const agg = loanOpsSummary.get(row.contract_key);
+            if (agg) {
+              agg.inferredInterestTotal += Number(ethers.formatUnits(residual, CDP_DECIMALS));
+            }
+            row.estimated_loan_interest_cost_cdp = formatAmount(residual, CDP_DECIMALS);
+          }
+        }
+        prevDebtByTrove.set(row._troveKey, nowDebt);
+      }
 
       const headers = [
         "tx_type",
@@ -383,6 +482,9 @@ module.exports = {
         "coll_gain_claimed",
         "trade_cdp_spent",
         "trade_coll_received",
+        "upfront_fee_cdp",
+        "debt_redist_cdp",
+        "estimated_loan_interest_cost_cdp",
       ];
 
       const csv = toCsv(
@@ -431,6 +533,73 @@ module.exports = {
 
       const redCols = toSummaryRows(redemptionSummary);
       const liqCols = toSummaryRows(liquidationSummary);
+      const loanCols = (() => {
+        const keys = new Set([
+          ...loanOpsSummary.keys(),
+          ...redemptionSummary.keys(),
+          ...liquidationSummary.keys(),
+        ]);
+        const rows = Array.from(keys).map((key) => {
+          const loan = loanOpsSummary.get(key) || {
+            contractKey: key,
+            collSymbol: getCollMeta(key).symbol,
+            count: 0,
+            borrowedTotal: 0,
+            repaidTotal: 0,
+            feeTotal: 0,
+          };
+          const red = redemptionSummary.get(key);
+          const liq = liquidationSummary.get(key);
+          const repaidByRed = red ? red.debtTotal : 0;
+          const repaidByLiq = liq ? liq.debtTotal : 0;
+          const effectiveRepaid = loan.repaidTotal + repaidByRed + repaidByLiq;
+          return {
+            collSymbol: loan.collSymbol,
+            count: loan.count,
+            borrowedTotal: loan.borrowedTotal,
+            repaidTotal: loan.repaidTotal,
+            repaidByRed,
+            repaidByLiq,
+            effectiveRepaid,
+            feeTotal: loan.feeTotal,
+          };
+        });
+        if (!rows.length) return { col1: "NONE", col2: "", col3: "", fees: "" };
+        const col1 = rows.map((s) => `${s.collSymbol} (${s.count})`).join("\n");
+        const col2 = rows.map((s) => `${formatNumber(s.borrowedTotal, 2)} ${CDP_SYMBOL}`).join("\n");
+        const col3 = rows.map((s) => `${formatNumber(s.effectiveRepaid, 2)} ${CDP_SYMBOL}`).join("\n");
+        const fees = rows
+          .map((s) => `${s.collSymbol}: ${formatNumber(s.feeTotal, 2)} ${CDP_SYMBOL}`)
+          .join("\n");
+        const breakdown = rows
+          .map(
+            (s) =>
+              `${s.collSymbol}: direct ${formatNumber(s.repaidTotal, 2)} + redemption ${formatNumber(
+                s.repaidByRed,
+                2
+              )} + liquidation ${formatNumber(s.repaidByLiq, 2)} ${CDP_SYMBOL}`
+          )
+          .join("\n");
+        const feeBreakdown = rows
+          .map(
+            (s) =>
+              `${s.collSymbol}: open ${formatNumber(s.feeOpenTotal, 2)} | adjust ${formatNumber(
+                s.feeAdjustTotal,
+                2
+              )} | IR-change ${formatNumber(s.feeIrChangeTotal, 2)} | other ${formatNumber(
+                s.feeOtherTotal,
+                2
+              )} ${CDP_SYMBOL}`
+          )
+          .join("\n");
+        const interestApplied = rows
+          .map(
+            (s) =>
+              `${s.collSymbol}: ${formatNumber(s.inferredInterestTotal, 2)} ${CDP_SYMBOL}`
+          )
+          .join("\n");
+        return { col1, col2, col3, fees, breakdown, feeBreakdown, interestApplied };
+      })();
       const spCols = (() => {
         const rows = Array.from(spSummary.values());
         if (!rows.length) return { col1: "NONE", col2: "", col3: "" };
@@ -446,6 +615,9 @@ module.exports = {
         .setDescription(`Period: ${range.label}`)
         .addFields({ name: "Range", value: rangeLabel })
         .addFields(
+          { name: "Loan Ops", value: loanCols.col1, inline: true },
+          { name: "Total Borrowed", value: loanCols.col2, inline: true },
+          { name: "Total Debt Reduced", value: loanCols.col3, inline: true },
           { name: "Redemptions", value: redCols.col1, inline: true },
           { name: "Total Debt Reduced", value: redCols.col2, inline: true },
           { name: "Total Coll Redeemed", value: redCols.col3, inline: true },
@@ -457,9 +629,33 @@ module.exports = {
           { name: "Total Coll Received", value: spCols.col3, inline: true }
         );
 
+      if (loanCols.fees) {
+        embed.addFields({
+          name: "Loan Op Fees (Total)",
+          value: loanCols.fees,
+          inline: false,
+        });
+        embed.addFields({
+          name: "Fee Breakdown (Totals)",
+          value: loanCols.feeBreakdown,
+          inline: false,
+        });
+        embed.addFields({
+          name: "Estimated Loan Interest Cost",
+          value: loanCols.interestApplied,
+          inline: false,
+        });
+        embed.addFields({
+          name: "Loan Debt Reduction Breakdown",
+          value: loanCols.breakdown,
+          inline: false,
+        });
+      }
+
       const noTx = combined.length === 0;
       const hasNonExchangeOnly =
         combined.length > 0 &&
+        loanOpsSummary.size === 0 &&
         redemptionSummary.size === 0 &&
         liquidationSummary.size === 0 &&
         spSummary.size === 0;

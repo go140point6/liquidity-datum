@@ -20,7 +20,6 @@ async function onInteraction(interaction) {
         return;
       }
 
-      log.debug(`Executing /${interaction.commandName} for ${interaction.user?.tag}`);
       await command.execute(interaction);
       return;
     }

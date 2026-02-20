@@ -23,8 +23,14 @@ Stability pool activity with exchange summaries and CSV export.
 
 <img src="img/my-sp-tx.png" alt="/my-sp-tx screenshot" width="720">
 
+### /my-loan-tx
+Loan operation history (open, adjust, close, repay, borrow) with loan fee totals and estimated loan interest cost.
+
+<!-- TODO: add screenshot -->
+<img src="img/my-loan-tx.png" alt="/my-loan-tx screenshot (placeholder)" width="720">
+
 ### /all-tx
-Combined view across redemptions, liquidations, and stability pool events for a full‑period export.
+Combined view across loan ops, redemptions, liquidations, and stability pool events for a full‑period export.
 
 <img src="img/all-tx.png" alt="/all-tx screenshot" width="720">
 
@@ -35,6 +41,7 @@ Combined view across redemptions, liquidations, and stability pool events for a 
 - **Consistent CSV formats** across commands, with common core fields.
 - **Time‑range filtering** (YTD, prior years, all time).
 - **Clear summaries** so you can see totals at a glance.
+- **Loan accounting fields** including fee totals and estimated loan interest cost.
 - **Data freshness** indicators based on scan completion time.
 
 ---
