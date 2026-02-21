@@ -547,6 +547,11 @@ module.exports = {
             borrowedTotal: 0,
             repaidTotal: 0,
             feeTotal: 0,
+            feeOpenTotal: 0,
+            feeAdjustTotal: 0,
+            feeIrChangeTotal: 0,
+            feeOtherTotal: 0,
+            inferredInterestTotal: 0,
           };
           const red = redemptionSummary.get(key);
           const liq = liquidationSummary.get(key);
@@ -562,6 +567,11 @@ module.exports = {
             repaidByLiq,
             effectiveRepaid,
             feeTotal: loan.feeTotal,
+            feeOpenTotal: loan.feeOpenTotal,
+            feeAdjustTotal: loan.feeAdjustTotal,
+            feeIrChangeTotal: loan.feeIrChangeTotal,
+            feeOtherTotal: loan.feeOtherTotal,
+            inferredInterestTotal: loan.inferredInterestTotal,
           };
         });
         if (!rows.length) return { col1: "NONE", col2: "", col3: "", fees: "" };
