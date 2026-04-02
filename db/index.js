@@ -13,6 +13,8 @@ function initSchema(db) {
   };
 
   addColumnIfMissing("loan_nft_transfers", "block_timestamp", "INTEGER");
+  addColumnIfMissing("loan_contracts", "coll_symbol", "TEXT");
+  addColumnIfMissing("loan_contracts", "coll_decimals", "INTEGER");
   addColumnIfMissing("redemption_events", "block_timestamp", "INTEGER");
   addColumnIfMissing("trove_events", "block_timestamp", "INTEGER");
   addColumnIfMissing("sp_deposit_ops", "block_timestamp", "INTEGER");

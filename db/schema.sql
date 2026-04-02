@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS loan_contracts (
   protocol TEXT NOT NULL,
   address_eip55 TEXT NOT NULL,
   default_start_block INTEGER NOT NULL,
+  coll_symbol TEXT,
+  coll_decimals INTEGER,
   trove_manager_address TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))

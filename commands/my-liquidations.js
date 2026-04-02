@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags, AttachmentBuilder } = r
 const { ethers } = require("ethers");
 const log = require("../utils/logger");
 const { openDatumDb } = require("../utils/db");
+const { getLoanCollMeta, loadLoanCollMetaMap } = require("../utils/loanCollateral");
 const { getUserWallets, requireWalletsOrReply } = require("../utils/sentinel");
 const { toCsv } = require("../utils/csv");
 
@@ -21,13 +22,6 @@ const OPERATION_LABELS = {
   8: "setInterestBatchManager",
   9: "removeFromBatch",
 };
-
-function getCollMeta(contractKey) {
-  const key = String(contractKey || "").toLowerCase();
-  if (key.includes("fxrp")) return { symbol: "FXRP", decimals: 6 };
-  if (key.includes("wflr")) return { symbol: "WFLR", decimals: 18 };
-  return { symbol: "COLL", decimals: 18 };
-}
 
 function parseSigned(value) {
   if (value == null) return null;
@@ -130,6 +124,7 @@ module.exports = {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       const period = interaction.options.getString("period", true);
       const range = buildPeriod(period);
+      const loanMetaMap = loadLoanCollMetaMap(db);
       const wallets = getUserWallets(db, interaction.user.id);
       const ok = await requireWalletsOrReply(interaction, wallets);
       if (!ok) return;
@@ -208,7 +203,7 @@ module.exports = {
         if (range.end != null && (blockTs == null || blockTs * 1000 > range.end)) continue;
 
         const op = parseJsonSafe(r.data_json);
-        const collMeta = getCollMeta(r.contract_key);
+        const collMeta = getLoanCollMeta(loanMetaMap, r.contract_key);
         const debtDelta = parseSigned(op?._debtChangeFromOperation);
         const collDelta = parseSigned(op?._collChangeFromOperation);
 

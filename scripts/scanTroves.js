@@ -9,6 +9,7 @@ require("dotenv").config({
 
 const { initSchema } = require("../db");
 const { openDatumDb } = require("../utils/db");
+const { inferLoanCollMeta } = require("../utils/loanCollateral");
 const { acquireLock, releaseLock } = require("../utils/lock");
 const troveNftAbi = require("../abi/troveNFT.json");
 const troveManagerAbi = require("../abi/troveManager.json");
@@ -133,12 +134,16 @@ function openDb() {
 
 async function ensureContracts(db, provider, contracts) {
   const upsert = db.prepare(`
-    INSERT INTO loan_contracts (contract_key, protocol, address_eip55, default_start_block, trove_manager_address)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO loan_contracts (
+      contract_key, protocol, address_eip55, default_start_block, coll_symbol, coll_decimals, trove_manager_address
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(contract_key) DO UPDATE SET
       protocol = excluded.protocol,
       address_eip55 = excluded.address_eip55,
       default_start_block = excluded.default_start_block,
+      coll_symbol = COALESCE(excluded.coll_symbol, loan_contracts.coll_symbol),
+      coll_decimals = COALESCE(excluded.coll_decimals, loan_contracts.coll_decimals),
       trove_manager_address = COALESCE(excluded.trove_manager_address, loan_contracts.trove_manager_address),
       updated_at = datetime('now')
   `);
@@ -146,7 +151,19 @@ async function ensureContracts(db, provider, contracts) {
   for (const c of contracts) {
     const nft = new ethers.Contract(c.address, troveNftAbi, provider);
     const tmAddr = await nft.troveManager();
-    upsert.run(c.key, c.protocol, ethers.getAddress(c.address), c.default_start_block, tmAddr);
+    const meta = {
+      symbol: c.coll_symbol || inferLoanCollMeta(c.key).symbol,
+      decimals: Number.isFinite(c.coll_decimals) ? c.coll_decimals : inferLoanCollMeta(c.key).decimals,
+    };
+    upsert.run(
+      c.key,
+      c.protocol,
+      ethers.getAddress(c.address),
+      c.default_start_block,
+      meta.symbol,
+      meta.decimals,
+      tmAddr
+    );
   }
 }
 
