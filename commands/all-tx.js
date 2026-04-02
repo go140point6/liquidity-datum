@@ -2,19 +2,13 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags, AttachmentBuilder } = r
 const { ethers } = require("ethers");
 const log = require("../utils/logger");
 const { openDatumDb } = require("../utils/db");
+const { getLoanCollMeta, loadLoanCollMetaMap } = require("../utils/loanCollateral");
 const { getUserWallets, requireWalletsOrReply } = require("../utils/sentinel");
 const { toCsv } = require("../utils/csv");
 
 const CDP_SYMBOL = "CDP";
 const CDP_DECIMALS = 18;
 const DATA_STALE_MINUTES = Number(process.env.DATUM_DATA_STALE_MINUTES || "0");
-
-function getCollMeta(contractKey) {
-  const key = String(contractKey || "").toLowerCase();
-  if (key.includes("fxrp")) return { symbol: "FXRP", decimals: 6 };
-  if (key.includes("wflr")) return { symbol: "WFLR", decimals: 18 };
-  return { symbol: "COLL", decimals: 18 };
-}
 
 function parseSigned(value) {
   if (value == null) return null;
@@ -143,6 +137,7 @@ module.exports = {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       const period = interaction.options.getString("period", true);
       const range = buildPeriod(period);
+      const loanMetaMap = loadLoanCollMetaMap(db);
       const wallets = getUserWallets(db, interaction.user.id);
       const ok = await requireWalletsOrReply(interaction, wallets);
       if (!ok) return;
@@ -221,7 +216,7 @@ module.exports = {
             maxTs = maxTs == null ? blockTs : Math.max(maxTs, blockTs);
           }
 
-          const collMeta = getCollMeta(troveOp.contract_key);
+          const collMeta = getLoanCollMeta(loanMetaMap, troveOp.contract_key);
           const debtDelta = parseSigned(op?._debtChangeFromOperation);
           const collDelta = parseSigned(op?._collChangeFromOperation);
           const fee = parseSigned(feeData?._ETHFee);
@@ -542,7 +537,7 @@ module.exports = {
         const rows = Array.from(keys).map((key) => {
           const loan = loanOpsSummary.get(key) || {
             contractKey: key,
-            collSymbol: getCollMeta(key).symbol,
+            collSymbol: getLoanCollMeta(loanMetaMap, key).symbol,
             count: 0,
             borrowedTotal: 0,
             repaidTotal: 0,

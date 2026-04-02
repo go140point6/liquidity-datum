@@ -17,6 +17,22 @@
           "default_start_block": 51999000,
           "coll_symbol": "WFLR",
           "coll_decimals": 18
+        },
+        {
+          "key": "sp_stxrp",
+          "protocol": "ENOSYS_SP_STXRP",
+          "address": "0x3FAEC256DCFDB9eBa882b5F71e020FA128081f56",
+          "default_start_block": 57855000,
+          "coll_symbol": "STXRP",
+          "coll_decimals": 18
+        },
+        {
+          "key": "sp_sflr",
+          "protocol": "ENOSYS_SP_SFLR",
+          "address": "0xE6B23B97A9058B88e6d068d57d8a69Fb07ab2A61",
+          "default_start_block": 57855000,
+          "coll_symbol": "SFLR",
+          "coll_decimals": 18
         }
       ]
     }

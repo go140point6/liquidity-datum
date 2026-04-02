@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags, AttachmentBuilder } = r
 const { ethers } = require("ethers");
 const log = require("../utils/logger");
 const { openDatumDb } = require("../utils/db");
+const { getLoanCollMeta, loadLoanCollMetaMap } = require("../utils/loanCollateral");
 const { getUserWallets, requireWalletsOrReply } = require("../utils/sentinel");
 const { toCsv } = require("../utils/csv");
 
@@ -9,13 +10,6 @@ const CDP_SYMBOL = "CDP";
 const CDP_DECIMALS = 18;
 const DATA_STALE_MINUTES = Number(process.env.DATUM_DATA_STALE_MINUTES || "0");
 const LOAN_OP_CODES = new Set([0, 1, 2, 3, 4, 7, 8, 9]);
-
-function getCollMeta(contractKey) {
-  const key = String(contractKey || "").toLowerCase();
-  if (key.includes("fxrp")) return { symbol: "FXRP", decimals: 6 };
-  if (key.includes("wflr")) return { symbol: "WFLR", decimals: 18 };
-  return { symbol: "COLL", decimals: 18 };
-}
 
 function getTroveOpLabel(code) {
   const n = Number(code);
@@ -130,6 +124,7 @@ module.exports = {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       const period = interaction.options.getString("period", true);
       const range = buildPeriod(period);
+      const loanMetaMap = loadLoanCollMetaMap(db);
       const wallets = getUserWallets(db, interaction.user.id);
       const ok = await requireWalletsOrReply(interaction, wallets);
       if (!ok) return;
@@ -219,7 +214,7 @@ module.exports = {
           .sort((a, b) => b.log_index - a.log_index)[0];
         const updatedData = updated ? parseJsonSafe(updated.data_json) : null;
 
-        const collMeta = getCollMeta(troveOp.contract_key);
+        const collMeta = getLoanCollMeta(loanMetaMap, troveOp.contract_key);
         const debtDelta = parseSigned(op?._debtChangeFromOperation);
         const collDelta = parseSigned(op?._collChangeFromOperation);
         const feeRaw = parseSigned(op?._debtIncreaseFromUpfrontFee) || 0n;

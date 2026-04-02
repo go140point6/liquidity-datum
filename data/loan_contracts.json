@@ -6,13 +6,33 @@
           "key": "enosys_fxrp",
           "protocol": "ENOSYS_LOAN_FXRP",
           "address": "0x5734E64d12621d353772D05210675B17923F3ff6",
-          "default_start_block": 51999000
+          "default_start_block": 51999000,
+          "coll_symbol": "FXRP",
+          "coll_decimals": 6
         },
         {
           "key": "enosys_wflr",
           "protocol": "ENOSYS_LOAN_WFLR",
           "address": "0x9EC6e96C8A96083daAAa68016FFcEd3D0606D72E",
-          "default_start_block": 51999000
+          "default_start_block": 51999000,
+          "coll_symbol": "WFLR",
+          "coll_decimals": 18
+        },
+        {
+          "key": "enosys_stxrp",
+          "protocol": "ENOSYS_LOAN_STXRP",
+          "address": "0x883803fdbf0408747a59E69C972A1d849a484033",
+          "default_start_block": 57855000,
+          "coll_symbol": "STXRP",
+          "coll_decimals": 18
+        },
+        {
+          "key": "enosys_sflr",
+          "protocol": "ENOSYS_LOAN_SFLR",
+          "address": "0xB12Dde517Bdf28DD5BE8A6916123D1aA5C6e83a1",
+          "default_start_block": 57855000,
+          "coll_symbol": "SFLR",
+          "coll_decimals": 18
         }
       ]
     }
