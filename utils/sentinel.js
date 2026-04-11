@@ -31,6 +31,24 @@ function getUserWallets(db, discordId) {
     .all(userId);
 }
 
+function getUserWalletsByChain(db, discordId, chainId) {
+  const userId = getUserIdByDiscordId(db, discordId);
+  if (!userId) return [];
+
+  return db
+    .prepare(
+      `
+      SELECT w.chain_id, w.address_eip55, w.label, w.is_enabled
+      FROM sentinel.user_wallets w
+      WHERE w.user_id = ?
+        AND w.chain_id = ?
+        AND w.is_enabled = 1
+      ORDER BY w.address_eip55
+    `
+    )
+    .all(userId, chainId);
+}
+
 async function requireWalletsOrReply(interaction, wallets) {
   if (wallets.length > 0) return true;
   const payload = {
@@ -47,4 +65,4 @@ async function requireWalletsOrReply(interaction, wallets) {
   return false;
 }
 
-module.exports = { getUserWallets, requireWalletsOrReply };
+module.exports = { getUserWallets, getUserWalletsByChain, requireWalletsOrReply };

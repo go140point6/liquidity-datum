@@ -3,7 +3,9 @@ const { ethers } = require("ethers");
 const log = require("../utils/logger");
 const { openDatumDb } = require("../utils/db");
 const { getLoanCollMeta, loadLoanCollMetaMap } = require("../utils/loanCollateral");
-const { getUserWallets, requireWalletsOrReply } = require("../utils/sentinel");
+const { addLoanProviderOption } = require("../utils/loanProviders");
+const { getUserWalletsByChain, requireWalletsOrReply } = require("../utils/sentinel");
+const { getPrimefiMarketMeta, loadPrimefiMarketMetaMap, parseSqliteTimestamp: parsePrimefiTs } = require("../utils/primefi");
 const { toCsv } = require("../utils/csv");
 
 const CDP_SYMBOL = "CDP";
@@ -95,10 +97,11 @@ function parseSqliteTimestamp(ts) {
 }
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName("my-liquidations")
-    .setDescription("Export your liquidation transactions (CSV).")
-    .addStringOption((opt) => {
+  data: addLoanProviderOption(
+    new SlashCommandBuilder()
+      .setName("my-liquidations")
+      .setDescription("Export your liquidation transactions (CSV).")
+  ).addStringOption((opt) => {
       const year = new Date().getUTCFullYear();
       const choices = [
         { name: "YTD", value: "YTD" },
@@ -122,10 +125,169 @@ module.exports = {
     const db = openDatumDb();
     try {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      const provider = interaction.options.getString("provider", true);
       const period = interaction.options.getString("period", true);
       const range = buildPeriod(period);
+
+      if (provider === "primefi") {
+        const wallets = getUserWalletsByChain(db, interaction.user.id, "XDC");
+        const ok = await requireWalletsOrReply(interaction, wallets);
+        if (!ok) return;
+
+        const marketMetaMap = loadPrimefiMarketMetaMap(db);
+        const walletLower = wallets.map((w) => w.address_eip55.toLowerCase());
+        const placeholders = walletLower.map(() => "?").join(",");
+        const rows = db
+          .prepare(
+            `
+            SELECT market_key, protocol, block_number, block_timestamp, tx_hash, log_index, event_name, user_lower, event_json
+            FROM sentinel.primefi_market_events
+            WHERE user_lower IN (${placeholders})
+              AND event_name = 'LiquidationCall'
+            ORDER BY block_number DESC, log_index DESC
+          `
+          )
+          .all(...walletLower);
+
+        const rowsOut = [];
+        const summaryByMarket = new Map();
+        for (const row of rows) {
+          const blockTs = row.block_timestamp;
+          if (range.start != null && (blockTs == null || blockTs * 1000 < range.start)) continue;
+          if (range.end != null && (blockTs == null || blockTs * 1000 > range.end)) continue;
+
+          const event = parseJsonSafe(row.event_json);
+          if (!event) continue;
+          const meta = getPrimefiMarketMeta(marketMetaMap, row.market_key);
+          const debtToCover = parseSigned(event.debtToCoverRaw);
+          const collLiquidated = parseSigned(event.liquidatedCollateralAmountRaw);
+          const debtAmount = debtToCover ? Number(ethers.formatUnits(debtToCover, 6)) : 0;
+          const collAmount = collLiquidated ? Number(ethers.formatUnits(collLiquidated, 18)) : 0;
+
+          if (!summaryByMarket.has(row.market_key)) {
+            summaryByMarket.set(row.market_key, {
+              marketKey: row.market_key,
+              collSymbol: meta.collSymbol,
+              debtSymbol: meta.debtSymbol,
+              count: 0,
+              debtTotal: 0,
+              collTotal: 0,
+            });
+          }
+          const agg = summaryByMarket.get(row.market_key);
+          agg.count += 1;
+          agg.debtTotal += debtAmount;
+          agg.collTotal += collAmount;
+
+          rowsOut.push({
+            tx_type: "LIQUIDATION",
+            datetime_utc: blockTs ? new Date(blockTs * 1000).toISOString() : "",
+            tx_hash: row.tx_hash,
+            block_number: row.block_number,
+            contract_key: row.market_key,
+            trove_or_pool_id: row.market_key,
+            wallet: row.user_lower,
+            sold_amount: formatAmount(collLiquidated, 18),
+            sold_symbol: meta.collSymbol,
+            bought_amount: formatAmount(debtToCover, 6),
+            bought_symbol: meta.debtSymbol,
+            debt_delta_cdp: "",
+            coll_delta: formatSigned(collLiquidated ? -collLiquidated : null, 18),
+            coll_symbol: meta.collSymbol,
+            op_code: "LiquidationCall",
+            op_label: "liquidationCall",
+            debt_now_cdp: "",
+            coll_now: "",
+            ir_pct: "",
+          });
+        }
+
+        rowsOut.sort((a, b) => b.block_number - a.block_number);
+
+        const headers = [
+          "tx_type",
+          "datetime_utc",
+          "tx_hash",
+          "block_number",
+          "contract_key",
+          "trove_or_pool_id",
+          "wallet",
+          "sold_amount",
+          "sold_symbol",
+          "bought_amount",
+          "bought_symbol",
+          "debt_delta_cdp",
+          "coll_delta",
+          "coll_symbol",
+          "op_code",
+          "op_label",
+          "debt_now_cdp",
+          "coll_now",
+          "ir_pct",
+        ];
+
+        const csv = toCsv(headers, rowsOut.map((r) => headers.map((h) => r[h])));
+        const filename = `liquidations_${interaction.user.id}_${Date.now()}.csv`;
+        const attachment = new AttachmentBuilder(Buffer.from(csv, "utf8"), { name: filename });
+
+        const scanRow = db
+          .prepare("SELECT MAX(last_scanned_at) AS last_scanned_at FROM sentinel.primefi_market_event_cursors")
+          .get();
+        const dataCapturedTs = parsePrimefiTs(scanRow?.last_scanned_at);
+        const nowTs = Math.floor(Date.now() / 1000);
+        const isStale =
+          DATA_STALE_MINUTES > 0 && dataCapturedTs != null
+            ? nowTs - dataCapturedTs > DATA_STALE_MINUTES * 60
+            : false;
+        const staleSuffix = isStale ? " ⚠️ Data may be stale." : "";
+
+        const rangeLabel =
+          range.start == null
+            ? "ALL"
+            : `${new Date(range.start).toISOString().slice(0, 10)} → ${new Date(range.end).toISOString().slice(0, 10)}`;
+
+        const summaryRows = Array.from(summaryByMarket.values()).map((s) => [
+          `${s.collSymbol} (${s.count})`,
+          `${formatNumber(s.debtTotal, 2)} ${s.debtSymbol}`,
+          `${formatNumber(s.collTotal, 4)} ${s.collSymbol}`,
+        ]);
+
+        const embed = new EmbedBuilder()
+          .setTitle("Datum — My Liquidations")
+          .setThumbnail(interaction.client.user.displayAvatarURL())
+          .setDescription(`Provider: PrimeFi\nPeriod: ${range.label}`)
+          .addFields({ name: "Range", value: rangeLabel })
+          .addFields(
+            { name: "Liquidations", value: summaryRows.length ? summaryRows.map((r) => r[0]).join("\n") : "NONE", inline: true },
+            { name: "Total Debt Repaid", value: summaryRows.length ? summaryRows.map((r) => r[1]).join("\n") : "", inline: true },
+            { name: "Total Coll Liquidated", value: summaryRows.length ? summaryRows.map((r) => r[2]).join("\n") : "", inline: true }
+          );
+
+        if (!rowsOut.length) {
+          embed.addFields({
+            name: "Note",
+            value: "No liquidation transactions found for this period.",
+            inline: false,
+          });
+        }
+
+        embed
+          .addFields({
+            name: "Data Captured",
+            value: dataCapturedTs ? `<t:${dataCapturedTs}:f>${staleSuffix}` : "unknown",
+            inline: false,
+          })
+          .setTimestamp(new Date(nowTs * 1000));
+
+        await interaction.editReply({
+          embeds: [embed],
+          files: rowsOut.length ? [attachment] : [],
+        });
+        return;
+      }
+
       const loanMetaMap = loadLoanCollMetaMap(db);
-      const wallets = getUserWallets(db, interaction.user.id);
+      const wallets = getUserWalletsByChain(db, interaction.user.id, "FLR");
       const ok = await requireWalletsOrReply(interaction, wallets);
       if (!ok) return;
 
