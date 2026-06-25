@@ -1,6 +1,6 @@
 function inferLoanCollMeta(contractKey) {
   const key = String(contractKey || "").toLowerCase();
-  if (key.includes("stxrp")) return { symbol: "STXRP", decimals: 18 };
+  if (key.includes("stxrp")) return { symbol: "STXRP", decimals: 6 };
   if (key.includes("sflr")) return { symbol: "SFLR", decimals: 18 };
   if (key.includes("fxrp")) return { symbol: "FXRP", decimals: 6 };
   if (key.includes("wflr")) return { symbol: "WFLR", decimals: 18 };
@@ -21,12 +21,18 @@ function loadLoanCollMetaMap(db) {
   return new Map(
     rows.map((row) => [
       row.contract_key,
-      {
-        symbol: row.coll_symbol || inferLoanCollMeta(row.contract_key).symbol,
-        decimals: Number.isFinite(row.coll_decimals)
-          ? row.coll_decimals
-          : inferLoanCollMeta(row.contract_key).decimals,
-      },
+      (() => {
+        const inferred = inferLoanCollMeta(row.contract_key);
+        return {
+          symbol: row.coll_symbol || inferred.symbol,
+          decimals:
+            String(row.contract_key || "").toLowerCase().includes("stxrp")
+              ? inferred.decimals
+              : Number.isFinite(row.coll_decimals)
+                ? row.coll_decimals
+                : inferred.decimals,
+        };
+      })(),
     ])
   );
 }

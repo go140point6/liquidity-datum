@@ -24,7 +24,7 @@
           "address": "0x3FAEC256DCFDB9eBa882b5F71e020FA128081f56",
           "default_start_block": 57855000,
           "coll_symbol": "STXRP",
-          "coll_decimals": 18
+          "coll_decimals": 6
         },
         {
           "key": "sp_sflr",

@@ -24,7 +24,7 @@
           "address": "0x883803fdbf0408747a59E69C972A1d849a484033",
           "default_start_block": 57855000,
           "coll_symbol": "STXRP",
-          "coll_decimals": 18
+          "coll_decimals": 6
         },
         {
           "key": "enosys_sflr",
