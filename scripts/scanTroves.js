@@ -48,8 +48,15 @@ function parseRetryAfterMs(err) {
 }
 
 function isRateLimitError(err) {
-  const msg = String(err?.message || "").toLowerCase();
-  return msg.includes("rate limit") || msg.includes("too many requests") || msg.includes("-32090");
+  const msg = [
+    err?.message,
+    err?.shortMessage,
+    err?.info?.responseStatus,
+    err?.info?.responseBody,
+  ].filter(Boolean).join(" ").toLowerCase();
+  return msg.includes("rate limit") || msg.includes("too many requests") ||
+    msg.includes("-32090") || msg.includes("429") ||
+    msg.includes("exceeded maximum retry limit");
 }
 
 async function getLogsWithRetry(provider, filter, { maxAttempts = 6 } = {}) {
@@ -280,11 +287,11 @@ async function scanLoanNftTransfers(db, provider, contract) {
     if (FLR_PAUSE_MS > 0) log.debug(`        pause ${FLR_PAUSE_MS}ms`);
 
     lastGoodBlock = toBlock;
+    updateCursor(db, cursorKey, lastGoodBlock);
     if (FLR_PAUSE_MS > 0) await sleep(FLR_PAUSE_MS);
   }
 
   if (lastGoodBlock >= fromBlock) {
-    updateCursor(db, cursorKey, lastGoodBlock);
     log.info(`  ✅ advanced cursor to ${lastGoodBlock} (scanned ${latestBlock - fromBlock + 1} blocks)`);
   }
 }
@@ -450,11 +457,11 @@ async function scanTroveManagerEvents(db, provider, contract) {
     if (FLR_PAUSE_MS > 0) log.debug(`        pause ${FLR_PAUSE_MS}ms`);
 
     lastGoodBlock = toBlock;
+    updateCursor(db, cursorKey, lastGoodBlock);
     if (FLR_PAUSE_MS > 0) await sleep(FLR_PAUSE_MS);
   }
 
   if (lastGoodBlock >= fromBlock) {
-    updateCursor(db, cursorKey, lastGoodBlock);
     log.info(`  ✅ advanced cursor to ${lastGoodBlock} (scanned ${latestBlock - fromBlock + 1} blocks)`);
   }
 }

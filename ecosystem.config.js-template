@@ -1,0 +1,36 @@
+const fs = require("node:fs");
+const path = require("node:path");
+const dotenv = require("dotenv");
+const fileEnv = dotenv.parse(fs.readFileSync(path.join(__dirname, ".env")));
+const runtimeEnv = { NODE_ENV: "production" };
+if (fileEnv.DEBUG != null) runtimeEnv.DEBUG = fileEnv.DEBUG;
+
+module.exports = {
+  apps: [
+    {
+      name: "liquidity-datum",
+      cwd: "/home/user/liquidity-datum",
+      script: "index.js",
+      interpreter: "/home/user/.nvm/versions/node/v24.21.0/bin/node",
+      exec_mode: "fork",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      time: true,
+      env: { ...runtimeEnv },
+    },
+    {
+      name: "datum-scan-all",
+      cwd: "/home/user/liquidity-datum",
+      script: "scripts/scanAll.js",
+      interpreter: "/home/user/.nvm/versions/node/v24.21.0/bin/node",
+      exec_mode: "fork",
+      instances: 1,
+      autorestart: false,
+      cron_restart: "*/10 * * * *",
+      watch: false,
+      time: true,
+      env: { ...runtimeEnv },
+    },
+  ],
+};

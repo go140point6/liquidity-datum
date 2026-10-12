@@ -131,3 +131,4 @@ dist
 data/*.sqlite
 data/archive
 locks/*
+data/liquidity-datum.sqlite.migration-20261012
